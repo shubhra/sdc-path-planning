@@ -315,7 +315,7 @@ int main() {
             }
             else if(((lane - car_lane) == -1))
             {
-              // other car is in our lane
+              // other car is one lane right of us
               if(dist_from_car > -10 && dist_from_car < 30)
                 too_close_right = true; // and too close ahead or behind us
               else
@@ -323,33 +323,35 @@ int main() {
             }
           }
           
+          //Behavior Phase
+          
           if(too_close_ahead)
           {
             if(lane == 1 && !too_close_left && too_close_right)
             {
-              // shift lane left
+              // only left lane is open, shift lane left
               lane = lane - 1;
             }
             else if(lane == 1 && too_close_left && !too_close_right)
             {
-              // shift lane right
+              // only right lane is open, shift lane right
               lane = lane + 1;
             }
             else if(lane == 1 && !too_close_left && !too_close_right)
             {
-              // both left and right are open go to better one
+              // both left and right are open, go to better one
 
               int better_lane_shift = left_car_ahead_dist >= right_car_ahead_dist ? -1 : 1;
               lane = lane + better_lane_shift;
             }
             else if(lane == 2 && !too_close_left)
             {
-              // can only shift lane left
+              // we are in the rightmost lane, can only shift lane left
               lane = lane - 1;
             }
             else if(lane == 0 && !too_close_right)
             {
-              // can only shift lane right
+              // we are in the leftmost lane, can only shift lane right
               lane = lane + 1;
             }
             
@@ -358,9 +360,8 @@ int main() {
               ref_vel -= SPEED_CHANGE_SMALL;
           }
           else if(ref_vel < SPEED_LIMIT)
-
           {
-            // Come back upto speed slowly that no car is too close ahead of us
+            // Come back upto speed slowly now that no car is too close ahead of us
               ref_vel += SPEED_CHANGE_SMALL;
           }
         
