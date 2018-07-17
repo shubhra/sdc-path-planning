@@ -20,8 +20,13 @@ constexpr double pi() { return M_PI; }
 double deg2rad(double x) { return x * pi() / 180; }
 double rad2deg(double x) { return x * 180 / pi(); }
 
-const double SPEED_LIMIT = 49.5;
-const double SPEED_CHANGE_SMALL = .224; //around 5ms-1 (under reqmnt)
+const double SPEED_LIMIT = 49.5; // mph
+const double SPEED_CHANGE_SMALL = .220; // around 5ms-1 (under reqmnt)
+const double CAR_AHEAD_MIN_DIST = 30;
+const double CAR_AHEAD_MIN_DIST_LEFT = 40;
+const double CAR_AHEAD_MIN_DIST_RIGHT = 40;
+const double CAR_BEHIND_MIN_DIST_LEFT = -4;
+const double CAR_BEHIND_MIN_DIST_RIGHT = -4;
 
 
 // Checks if the SocketIO event has JSON data.
@@ -209,7 +214,7 @@ int main() {
   int lane = 1;
   
   //Reference velocity less than speed limit (initial some smalll value less that required 10)
-  double ref_vel = 6.0; //mph
+  double ref_vel = 5.0; //mph
   
   h.onMessage([&ref_vel, &lane, &map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
@@ -261,8 +266,8 @@ int main() {
           bool too_close_ahead = false;
           bool too_close_left = false;
           bool too_close_right = false;
-          double left_car_ahead_dist = 100.0;
-          double right_car_ahead_dist = 100.0;
+          double car_ahead_dist_left = 1000.0; // give left lane shift precedence if both lanes are open
+          double car_ahead_dist_right = 100.0;
           double car_ahead_speed = ref_vel;
           
           // Find a reference velocity to use
@@ -299,7 +304,7 @@ int main() {
             
             double dist_from_car = check_car_s - car_s;
             
-            if((car_lane == lane) && is_car_ahead && (dist_from_car < 30))
+            if((car_lane == lane) && is_car_ahead && (dist_from_car < CAR_AHEAD_MIN_DIST))
             {
               // other car is in our lane and too close ahead of us
               too_close_ahead = true;
@@ -308,18 +313,18 @@ int main() {
             else if((lane - car_lane) == 1)
             {
               // other car is one lane left of us
-              if((dist_from_car > -10) && (dist_from_car < 30 ))
+              if(dist_from_car > CAR_BEHIND_MIN_DIST_LEFT && dist_from_car < CAR_AHEAD_MIN_DIST_LEFT)
                 too_close_left = true; // and too close ahead or behind us
-              else
-                left_car_ahead_dist =  is_car_ahead ? dist_from_car : 100; // and NOT close
+              else if(is_car_ahead) // and NOT too close
+                car_ahead_dist_left = dist_from_car;
             }
             else if(((lane - car_lane) == -1))
             {
               // other car is one lane right of us
-              if(dist_from_car > -10 && dist_from_car < 30)
+              if(dist_from_car > CAR_BEHIND_MIN_DIST_RIGHT && dist_from_car < CAR_AHEAD_MIN_DIST_RIGHT)
                 too_close_right = true; // and too close ahead or behind us
-              else
-                right_car_ahead_dist = is_car_ahead ? dist_from_car : 100; // and NOT close
+              else if(is_car_ahead)  // and NOT too close
+                car_ahead_dist_right = dist_from_car;
             }
           }
           
@@ -341,7 +346,7 @@ int main() {
             {
               // both left and right are open, go to better one
 
-              int better_lane_shift = left_car_ahead_dist >= right_car_ahead_dist ? -1 : 1;
+              int better_lane_shift = car_ahead_dist_left >= car_ahead_dist_right ? -1 : 1;
               lane = lane + better_lane_shift;
             }
             else if(lane == 2 && !too_close_left)
@@ -359,10 +364,13 @@ int main() {
             if(ref_vel > car_ahead_speed)
               ref_vel -= SPEED_CHANGE_SMALL;
           }
-          else if(ref_vel < SPEED_LIMIT)
+          else
           {
             // Come back upto speed slowly now that no car is too close ahead of us
-              ref_vel += SPEED_CHANGE_SMALL;
+            if(ref_vel < SPEED_LIMIT)
+               ref_vel += SPEED_CHANGE_SMALL;
+            if(lane == 0 && !too_close_right)
+              lane = 1;
           }
         
           json msgJson;
