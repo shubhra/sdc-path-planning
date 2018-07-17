@@ -86,4 +86,57 @@ A really helpful resource for doing this project and creating smooth trajectorie
     cd uWebSockets
     git checkout e94b6e1
     ```
+    
+---
+## Rubric Points discussed
 
+Simulator Video:
+- You can find one loop of the car around the simulator track [here](https://youtu.be/QhI7Mk5-zxQ)
+
+The car doesn't drive faster than the speed limit
+- No speed limit warning message show up during the run. The max speed is set to 49.5mph just shy of a 50 mph limit to avoid crossing this at any time.
+
+The car does not exceed a total acceleration of 10 m/s^2 and a jerk of 10 m/s^3
+- Max jerk warning message does not show during the simulator run. The car speeds up and slows down at roughly 5m/s to avoid the reaching acceleration
+
+The car must not come into contact with any of the other cars on the road
+- No collisions were reported and the car manouvers safely
+
+The car stays in its lane, except for the time between changing lanes.
+- The car stays in its lane most of the time except when it changes lane because of traffic or to return to the center lane from the leftmost lane
+
+The car doesn't spend more than a 3 second length out side the lane lanes during changing lanes
+- The car attempts to change lanes whenever there is a slow car ahead of it. It checkes if it is safe to change lanes (no other cars in the left or right lane too close ahead (~40m) or too close behind (~5m)) or when it is safe to return the center lane from the leftmost lane
+
+The car is able to smoothly change lanes when it makes sense to do so
+ - it smoothly changes lanes when it sees an opportunity to do so
+
+Reflection
+
+The code consist of three major parts:
+
+Prediction Phase
+
+This part of the code checks the cars surroudnings using telemetry and sensor fusion data to find cars ahead of, in the left  or right lane. It almo makes judgement regarding whether-
+- Other cars are too close ahead of us (less than 30m ahead)
+- Other cars are too close in the left/right lane ahead/behind us for a comfortable/sensible lane shift (less than 40m ahead and less than 5m behind). Also keeps track whether is it better to make a left or a right lane shift in case both are open.
+ 
+
+Behavior Phase
+
+This part decides what steps to take in the following scenarios from the prediction phase:
+
+If a car is ahead of us in our lane:
+- Slow down slowly to match that cars speed
+- Look for an opportunity to shift lane to the left or right whichever is open
+If no car is ahead of us:
+- increase speed slowly to reach speed limit
+- if we are in the leftmost lane then shift over one lane to the right (if open)
+
+Trajectory Phase
+
+This part calculates the trajectory to give to the simuator. 
+
+First, the last two points of the previous trajectory (or the current position of the car during the initial step) are used along with 3 more points at a further distance ahead of us (at 30m, 60m and 90m) to initialize the spline. These 5 points are transformed to the cars coordinate system for ease of calculation. For continuity of trajectory, previous points that were acted upon in the previous pass are kept. New points are also added to the trajectory by evaluating the spline at 30m and transforming the output coordinates to map coordinates.
+
+---
